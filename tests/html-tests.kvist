@@ -1,0 +1,13 @@
+;; Copyright (c) Andreas Flakstad and Kvist contributors
+;; SPDX-License-Identifier: MIT
+
+(package tests)
+(import t "kvist:test")
+(import html "..")
+
+(t.deftest renders-and-escapes-html
+  (let [rendered (html.render
+                   [div {class "panel"}
+                    [span "A&B"]]) :defer]
+    (t.is (= rendered
+             "<div class=\"panel\"><span>A&amp;B</span></div>"))))
