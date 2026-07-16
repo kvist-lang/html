@@ -48,6 +48,16 @@ and disappear when false:
    [p 42]])
 ```
 
+Use a string key when an attribute name contains punctuation that is not part
+of Kvist's bare symbol or keyword syntax. This is especially useful for
+Datastar and similar HTML-native libraries:
+
+```clojure
+(html.render
+  [form {"data-on:submit__prevent" "@post('/capture')"}
+   [input {"data-bind" "captureTitle"}]])
+```
+
 Use `[<> ...]` for a fragment with no wrapper element:
 
 ```clojure

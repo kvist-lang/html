@@ -102,13 +102,15 @@
         (= text "false"))))
 
 (defmacro- html-name [form context]
-  (if (symbol? form)
-    (if (= (text form) (name form))
-      (name form)
-      (error (str context " must use bare names without trailing :")))
-    (if (keyword? form)
-      (name form)
-      (error (str context " must be a bare symbol or keyword")))))
+  (if (string? form)
+    (text form)
+    (if (symbol? form)
+      (if (= (text form) (name form))
+        (name form)
+        (error (str context " must use bare names without trailing :")))
+      (if (keyword? form)
+        (name form)
+        (error (str context " must be a bare symbol, keyword, or string"))))))
 
 (defmacro- fragment-tag? [tag]
   (if (symbol? tag)
@@ -217,8 +219,9 @@
   "Expand a Hiccup-style HTML vector tree into an internal typed node.
 
   Element vectors use the shape `[tag {attr value...} child...]`; the attrs map
-  is optional. Tags and attr names may be written either as bare symbols such
-  as `div` and `class`, or as keywords such as `:div` and `:class`. `[<>
+  is optional. Tags and attr names may be written as bare symbols such
+  as `div` and `class`, as keywords such as `:div` and `:class`, or as strings
+  when punctuation such as Datastar's `data-on:submit` is required. `[<>
   child...]` creates a fragment with no wrapper element. Literal strings, ints,
   floats, bools, and nested vectors are converted directly to typed node
   values.

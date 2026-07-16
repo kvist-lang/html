@@ -11,3 +11,11 @@
                     [span "A&B"]]) :defer]
     (t.is (= rendered
              "<div class=\"panel\"><span>A&amp;B</span></div>"))))
+
+(t.deftest renders-punctuated-string-attribute-names
+  (let [rendered (html.render
+                   [form {"data-on:submit__prevent" "@post('/capture')"
+                          "aria-label" "Capture"}
+                    [input {"data-bind" "captureTitle"}]]) :defer]
+    (t.is (= rendered
+             "<form data-on:submit__prevent=\"@post(&#39;/capture&#39;)\" aria-label=\"Capture\"><input data-bind=\"captureTitle\"></input></form>"))))
