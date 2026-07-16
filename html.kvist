@@ -42,11 +42,18 @@
   children: (slice Node)
 })
 
+(defstruct- Raw
+  "Trusted markup or raw-text element content that bypasses HTML escaping."
+  {
+  text: string
+})
+
 (defunion- Node
   "Rendered HTML tree node."
   {
   none: Nothing
   fragment: Fragment
+  raw: Raw
   text: string
   int: int
   float: float
@@ -220,8 +227,8 @@
 
   Element vectors use the shape `[tag {attr value...} child...]`; the attrs map
   is optional. Tags and attr names may be written as bare symbols such
-  as `div` and `class`, as keywords such as `:div` and `:class`, or as strings
-  when punctuation such as Datastar's `data-on:submit` is required. `[<>
+  as `div` and `class`, as keywords such as `:div`, `:class`, and
+  `:data-on:submit`, or as strings for names supplied as data. `[<>
   child...]` creates a fragment with no wrapper element. Literal strings, ints,
   floats, bools, and nested vectors are converted directly to typed node
   values.
@@ -246,6 +253,11 @@
 
 (defn- noop []
   (do))
+
+(defn raw
+  "Wrap trusted HTML or raw-text element content without escaping it."
+  [text: string] -> Node
+  (Node {raw: (Raw {text: text})}))
 
 (defn- replace-owned [text: string, old: string, new: string] -> string
   (let [[updated allocated?] (strings.replace text old new -1)]
@@ -292,6 +304,8 @@
     Fragment
     (for [child value.children]
       (render-node-into builder child))
+    Raw
+    (strings.write_string builder value.text)
     Element
     (do
       (strings.write_string builder "<")
@@ -550,6 +564,22 @@
         (error "html.render Hiccup vectors do not take template bindings")
         (emit-template-render form (first rest)))
       (error "html.render expects a Hiccup vector, a template string, or a template plus bindings"))))
+
+(defmacro render-document
+  "Render a complete HTML document to an owned string.
+
+  The vector is rendered through the same Hiccup path as `html.render`, with
+  `<!doctype html>` emitted before its root element."
+  [form]
+  (if (vector? form)
+    (let [builder (gensym "__html_document_builder")]
+      (quasiquote
+        (let [(unquote builder) (strings.builder_make)]
+          (defer (strings.builder_destroy (addr (unquote builder))))
+          (strings.write_string (addr (unquote builder)) "<!doctype html>")
+          (splice (emit-render-child builder form))
+          (finish-builder (addr (unquote builder))))))
+    (error "html.render-document expects one Hiccup vector")))
 
 (defmacro render-file
   "Render a compile-time template file with placeholder bindings.

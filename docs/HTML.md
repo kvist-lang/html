@@ -48,15 +48,36 @@ and disappear when false:
    [p 42]])
 ```
 
-Use a string key when an attribute name contains punctuation that is not part
-of Kvist's bare symbol or keyword syntax. This is especially useful for
-Datastar and similar HTML-native libraries:
+Kvist keywords may contain embedded colons, so Datastar and similar
+HTML-native attribute names remain natural Hiccup keys:
 
 ```clojure
 (html.render
-  [form {"data-on:submit__prevent" "@post('/capture')"}
-   [input {"data-bind" "captureTitle"}]])
+  [:form {:data-on:submit__prevent "@post('/capture')"}
+   [:input {:data-bind "captureTitle"}]])
 ```
+
+String keys remain available when an attribute name is supplied as external
+data rather than written literally.
+
+For a complete page, `html.render-document` uses the same Hiccup renderer and
+prepends the HTML doctype:
+
+```clojure
+(html.render-document
+  [:html {:lang "en"}
+   [:head [:title "Status"]]
+   [:body [:main "Ready"]]])
+```
+
+Text is escaped by default, including inside `style` and `script`. Wrap
+trusted raw-text content explicitly when the browser must receive it verbatim:
+
+```clojure
+[:style (html.raw "body { font-family: 'A&B'; }")]
+```
+
+Never pass untrusted input to `html.raw`.
 
 Use `[<> ...]` for a fragment with no wrapper element:
 

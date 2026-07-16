@@ -12,10 +12,25 @@
     (t.is (= rendered
              "<div class=\"panel\"><span>A&amp;B</span></div>"))))
 
-(t.deftest renders-punctuated-string-attribute-names
+(t.deftest renders-punctuated-keyword-attribute-names
   (let [rendered (html.render
-                   [form {"data-on:submit__prevent" "@post('/capture')"
-                          "aria-label" "Capture"}
-                    [input {"data-bind" "captureTitle"}]]) :defer]
+                   [:form {:data-on:submit__prevent "@post('/capture')"
+                           :aria-label "Capture"}
+                    [:input {:data-bind "captureTitle"}]]) :defer]
     (t.is (= rendered
              "<form data-on:submit__prevent=\"@post(&#39;/capture&#39;)\" aria-label=\"Capture\"><input data-bind=\"captureTitle\"></input></form>"))))
+
+(t.deftest renders-complete-document
+  (let [rendered (html.render-document
+                   [:html {:lang "en"}
+                    [:head [:title "Ro"]]
+                    [:body {:data-on:load "@get('/ready')"}
+                     [:main "Ready"]]]) :defer]
+    (t.is (= rendered
+             "<!doctype html><html lang=\"en\"><head><title>Ro</title></head><body data-on:load=\"@get(&#39;/ready&#39;)\"><main>Ready</main></body></html>"))))
+
+(t.deftest renders-explicit-trusted-raw-text
+  (let [rendered (html.render
+                   [:style (html.raw "body > p { font-family: 'A&B'; }")]) :defer]
+    (t.is (= rendered
+             "<style>body > p { font-family: 'A&B'; }</style>"))))
