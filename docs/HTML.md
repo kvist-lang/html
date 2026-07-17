@@ -1,67 +1,77 @@
 # HTML
 
-`html` is a small HTML renderer for building markup directly from Kvist
-code or simple templates. It gives you two main paths:
-
-- Hiccup-style vectors for pages built in Kvist code.
-- Template strings or files with `{{name}}` placeholders.
-
-Both return owned strings. If you bind the result locally, delete it when you
-are done.
-
-## Hiccup-Style Rendering
-
-Import the package and pass a vector tree to `html.render`:
+`html` renders Hiccup-shaped Kvist `Data`. Contextual Data literals make the
+inline form concise: the renderer's parameter type supplies `Data` context, so
+expressions evaluate normally without quote or unquote syntax.
 
 ```clojure
 (import html "deps/html")
 
-(let [page (html.render
-             [div {class "panel"}
-              [h1 "Status"]
-              [p "Ready <ok>"]]) :defer]
+(let [title "Status"
+      page (html.render
+             [:section {:class "panel"}
+              [:h1 title]
+              [:p "Ready <ok>"]]) :defer]
   (println page))
 ```
 
-Kvist documents the bare-tag style as the primary path:
-
-```clojure
-[div {class "panel"} ...]
-```
-
-For normal Hiccup familiarity, the package also accepts keyword tags and
-keyword attr names:
-
-```clojure
-[:div {:class "panel"}
- [:h1 "Status"]]
-```
-
-String text and string attributes are HTML-escaped. Integers, floats, and bools
-render as text values. Boolean attributes render as a bare attribute when true
-and disappear when false:
-
-```clojure
-(html.render
-  [section {hidden false data-count 3}
-   [p true]
-   [p 42]])
-```
-
-Kvist keywords may contain embedded colons, so Datastar and similar
-HTML-native attribute names remain natural Hiccup keys:
+Tags and attribute names are keywords. Strings are text or attribute values
+and are escaped by default. Nil omits a child or attribute; boolean attributes
+render as bare names when true and disappear when false.
 
 ```clojure
 (html.render
   [:form {:data-on:submit__prevent "@post('/capture')"}
-   [:input {:data-bind "captureTitle"}]])
+   [:input {:disabled false :data-bind "captureTitle"}]])
 ```
 
-String keys remain available when an attribute name is supplied as external
-data rather than written literally.
+HTML void elements do not receive closing tags and cannot contain children.
+Use `:<>` for a fragment:
 
-For a complete page, `html.render-document` uses the same Hiccup renderer and
-prepends the HTML doctype:
+```clojure
+(html.render
+  [:<>
+   [:h2 "One"]
+   [:h2 "Two"]])
+```
+
+## Expressions and reusable Data
+
+Symbols and calls in contextual collections are evaluated and converted to
+Data. Conditionals inherit the same expected type:
+
+```clojure
+(html.render
+  [:main
+   [:h1 title]
+   (if ready?
+     [:p "Ready"]
+     nil)])
+```
+
+Existing Data uses the same overload:
+
+```clojure
+(def page '[:article {:class "card"} [:h1 "Stored"]])
+(html.render page)
+```
+
+`html.try-render-data` returns `[html error ok]` for untrusted Data.
+`html.render` asserts with the same validation message when its Data is
+invalid. Tags and attribute names must be non-empty keywords; supported child
+values are nil, booleans, numbers, strings, and nested element vectors.
+
+Passing a string to `html.render` renders it as escaped text:
+
+```clojure
+(html.render "A&B <ok>")
+;; => "A&amp;B &lt;ok&gt;"
+```
+
+## Documents
+
+`html.render-document` renders Data through the same rules and prepends the
+HTML doctype:
 
 ```clojure
 (html.render-document
@@ -70,106 +80,19 @@ prepends the HTML doctype:
    [:body [:main "Ready"]]])
 ```
 
-Text is escaped by default, including inside `style` and `script`. Wrap
-trusted raw-text content explicitly when the browser must receive it verbatim:
-
-```clojure
-[:style (html.raw "body { font-family: 'A&B'; }")]
-```
-
-Never pass untrusted input to `html.raw`.
-
-Use `[<> ...]` for a fragment with no wrapper element:
-
-```clojure
-(html.render
-  [div
-   [<> [h2 "One"] [h2 "Two"]]])
-```
-
-## Expressions
-
-Attributes and children can use ordinary Kvist expressions:
-
-```clojure
-(let [title "Dashboard"
-      ready? true]
-  (html.render
-    [section {data-state (if ready? "ready" "waiting")}
-     [h1 title]
-     (if ready? "Live" "Paused")]))
-```
-
-`nil` omits a child or attribute. `when` can be used for conditional output:
-
-```clojure
-(html.render
-  [div {data-archived (when archived? "true")}
-   (when archived?
-     [p "Archived"])])
-```
-
-Use strings for HTML attribute and child text. Keyword tags and keyword attr
-names are accepted for Hiccup compatibility, but keyword values are still
-rejected in attrs and children; use strings there.
-
-## Loops
-
-Use `html.for` inside render trees when the page needs repeated children:
-
-```clojure
-(import arr "kvist:arr")
-(import html "deps/html")
-
-(let [ids (arr.range 1 4) :defer
-      page (html.render
-             [ul
-              (html.for [id ids]
-                [li id])]) :defer]
-  (println page))
-```
-
-`html.for` is compile-time rendering structure. It emits ordinary looping code
-into the renderer; it is not a lazy sequence.
-
 ## Templates
 
-For boring string templates, use `html.render` with a template string and a
-brace literal of replacements:
+`html.template` accepts a string alone or a string plus contextual Data map.
+Binding names are keywords and values are strings:
 
 ```clojure
-(html.render "<p>{{name}}</p>" {name "Ada"})
+(html.template "<p>{{name}}</p>" {:name name})
 ```
 
-`html.render-file` reads the template file at macro expansion time and embeds
-the template contents:
+`html.render-file` reads a template at macro expansion time:
 
 ```clojure
-(html.render-file "html-template.html" {name "Bob"})
+(html.render-file "html-template.html" {:name "Ada"})
 ```
 
-This is handy for small static templates. It is not a runtime file watcher; if
-the file changes, rebuild.
-
-## Ownership
-
-`html.render` and `html.render-file` return owned strings:
-
-```clojure
-(let [page (html.render [p "hello"]) :defer]
-  (println page))
-```
-
-If the rendered string is returned to the caller, ownership follows the normal
-Kvist rules.
-
-## Examples
-
-- [`examples/html-demo.kvist`](../examples/html-demo.kvist) - vector
-  rendering and `html.for`.
-- [`examples/html-interpolation.kvist`](../examples/html-interpolation.kvist) -
-  expressions, `if`, `when`, fragments, and `nil`.
-- [`examples/html-values.kvist`](../examples/html-values.kvist) -
-  typed scalar values.
-- [`examples/html-render-file.kvist`](../examples/html-render-file.kvist) -
-  compile-time template file rendering.
+All rendering functions return owned strings.

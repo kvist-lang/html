@@ -17,19 +17,20 @@
         enabled? true
         archived? false
         html (html.render
-               [section {data-count count
-                         data-ratio ratio
-                         hidden enabled?
-                         data-state (if enabled? "ready" "hidden")
-                         data-archived (when archived? "true")}
-                [h1 title]
-                [<>
-                 [h2 title]
-                 [p (+ count 10)]]
-                [p (status-label enabled?)]
-                [p (+ count 1)]
-                (when archived?
-                  [p "Archived"])
+               [:section {:data-count count
+                          :data-ratio ratio
+                          :hidden enabled?
+                          :data-state (if enabled? "ready" "hidden")
+                          :data-archived (if archived? "true" nil)}
+                [:h1 title]
+                [:<>
+                 [:h2 title]
+                 [:p (+ count 10)]]
+                [:p (status-label enabled?)]
+                [:p (+ count 1)]
+                (if archived?
+                  [:p "Archived"]
+                  nil)
                 nil
                 (if enabled?
                   "Visible"

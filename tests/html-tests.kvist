@@ -5,10 +5,11 @@
 (import t "kvist:test")
 (import html "..")
 
-(t.deftest renders-and-escapes-html
-  (let [rendered (html.render
-                   [div {class "panel"}
-                    [span "A&B"]]) :defer]
+(t.deftest renders-contextual-data-and-escapes-html
+  (let [title "A&B"
+        rendered (html.render
+                   [:div {:class "panel"}
+                    [:span title]]) :defer]
     (t.is (= rendered
              "<div class=\"panel\"><span>A&amp;B</span></div>"))))
 
@@ -18,19 +19,52 @@
                            :aria-label "Capture"}
                     [:input {:data-bind "captureTitle"}]]) :defer]
     (t.is (= rendered
-             "<form data-on:submit__prevent=\"@post(&#39;/capture&#39;)\" aria-label=\"Capture\"><input data-bind=\"captureTitle\"></input></form>"))))
+             "<form data-on:submit__prevent=\"@post(&#39;/capture&#39;)\" aria-label=\"Capture\"><input data-bind=\"captureTitle\"></form>"))))
+
+(t.deftest renders-existing-data-through-the-same-overload
+  (let [tree '[:article {:class "card"} [:h1 "Stored"]]
+        rendered (html.render tree) :defer]
+    (t.is (= rendered
+             "<article class=\"card\"><h1>Stored</h1></article>"))))
+
+(t.deftest renders-conditional-contextual-data
+  (let [ready? true
+        rendered (html.render
+                   [:section
+                    (if ready?
+                      [:p "Ready"]
+                      nil)]) :defer]
+    (t.is (= rendered "<section><p>Ready</p></section>"))))
+
+(t.deftest renders-keyword-fragments
+  (let [rendered (html.render
+                   [:<>
+                    [:h2 "One"]
+                    [:h2 "Two"]]) :defer]
+    (t.is (= rendered "<h2>One</h2><h2>Two</h2>"))))
 
 (t.deftest renders-complete-document
   (let [rendered (html.render-document
                    [:html {:lang "en"}
-                    [:head [:title "Ro"]]
+                    [:head [:title "Kvist"]]
                     [:body {:data-on:load "@get('/ready')"}
                      [:main "Ready"]]]) :defer]
     (t.is (= rendered
-             "<!doctype html><html lang=\"en\"><head><title>Ro</title></head><body data-on:load=\"@get(&#39;/ready&#39;)\"><main>Ready</main></body></html>"))))
+             "<!doctype html><html lang=\"en\"><head><title>Kvist</title></head><body data-on:load=\"@get(&#39;/ready&#39;)\"><main>Ready</main></body></html>"))))
 
-(t.deftest renders-explicit-trusted-raw-text
-  (let [rendered (html.render
-                   [:style (html.raw "body > p { font-family: 'A&B'; }")]) :defer]
-    (t.is (= rendered
-             "<style>body > p { font-family: 'A&B'; }</style>"))))
+(t.deftest rejects-non-keyword-tags
+  (let [[rendered error ok] (html.try-render-data '[div "No"])
+        _ rendered]
+    (t.is (not ok))
+    (t.is (= error.message "HTML tags must be non-empty keywords"))))
+
+(t.deftest renders-string-input-as-escaped-text
+  (let [rendered (html.render "A&B <ok>") :defer]
+    (t.is (= rendered "A&amp;B &lt;ok&gt;"))))
+
+(t.deftest renders-data-template-bindings
+  (let [name "Ada"
+        rendered (html.template
+                   "<p>{{name}}</p>"
+                   {:name name}) :defer]
+    (t.is (= rendered "<p>Ada</p>"))))

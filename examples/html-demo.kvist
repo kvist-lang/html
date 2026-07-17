@@ -1,19 +1,15 @@
 ;; Copyright (c) Andreas Flakstad and Kvist contributors
 ;; SPDX-License-Identifier: MIT
 
-;; A shipped source package macro that renders Hiccup-style HTML data.
+;; Contextual Data literals make inline Hiccup ordinary typed Kvist.
 (package main)
-(import arr "kvist:arr")
 (import h "..")
 
 (defn html-demo [] -> bool
-  (let [ids (arr.range 1 4) :defer
-        page (h.render
-               [div {class "border" onclick "alert('hello!')"}
-                [button {class "primary"} "Save"]
-                [ul
-                 (h.for [id ids]
-                   [li id])]]) :defer]
+  (let [page (h.render
+               [:div {:class "border" :onclick "alert('hello!')"}
+                [:button {:class "primary"} "Save"]
+                [:ul [:li 1] [:li 2] [:li 3]]]) :defer]
     (println page)
     true))
 
