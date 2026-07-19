@@ -46,7 +46,7 @@
   (and (data.keyword? value)
        (> (count (data.keyword value)) 1)))
 
-(defn- keyword-name [value: Data] -> string #borrowed
+(defn- keyword-name [value: Data] -> string
   (let [text (data.keyword value)]
     text[1:]))
 
