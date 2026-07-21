@@ -19,6 +19,18 @@ Tags and attribute names are keywords. Strings are text or attribute values
 and are escaped by default. Nil omits a child or attribute; boolean attributes
 render as bare names when true and disappear when false.
 
+Tags support Hiccup id and class shorthand. Put an id after `#` and one or
+more classes after `.`:
+
+```clojure
+(html.render
+  [:div#daily-report-configuration.report.daily "Ready"])
+;; => <div id="daily-report-configuration" class="report daily">Ready</div>
+```
+
+An explicit `:id` or `:class` in the attribute map overrides the corresponding
+shorthand value.
+
 ```clojure
 (html.render
   [:form {:data-on:submit__prevent "@post('/capture')"}

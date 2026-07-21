@@ -50,6 +50,50 @@
   (let [text (data.keyword value)]
     text[1:]))
 
+(defn- tag-name-end [shorthand: string] -> int
+  (let [id-index (strings.index shorthand "#")
+        class-index (strings.index shorthand ".")]
+    (cond
+      (= id-index -1) (if (= class-index -1) (count shorthand) class-index)
+      (= class-index -1) id-index
+      :else (min id-index class-index))))
+
+(defn- validate-tag-shorthand [shorthand: string]
+  -> [error: Render-Error, ok: bool]
+  (let [name-end (tag-name-end shorthand)
+        id-index (strings.index shorthand "#")
+        class-index (strings.index shorthand ".")
+        invalid-message
+          "HTML tag shorthand must use :tag#id.class syntax with non-empty parts"]
+    (if (= name-end 0)
+      (return (failure invalid-message)))
+    (if (and (!= id-index -1)
+             (!= class-index -1)
+             (> id-index class-index))
+      (return (failure invalid-message)))
+    (when (!= id-index -1)
+      (let [id-end (if (= class-index -1) (count shorthand) class-index)]
+        (if (= (+ id-index 1) id-end)
+          (return (failure invalid-message))))
+      (if (!= (strings.index
+                 (odin-slice shorthand (+ id-index 1))
+                 "#")
+              -1)
+        (return (failure invalid-message))))
+    (when (!= class-index -1)
+      (let [cursor (+ class-index 1)]
+        (while (<= cursor (count shorthand))
+          (let [relative-end (strings.index (odin-slice shorthand cursor) ".")
+                part-end (if (= relative-end -1)
+                           (count shorthand)
+                           (+ cursor relative-end))]
+            (if (= cursor part-end)
+              (return (failure invalid-message)))
+            (if (= relative-end -1)
+              (set! cursor (+ (count shorthand) 1))
+              (set! cursor (+ part-end 1)))))))
+    (success)))
+
 (defn- void-tag? [tag: string] -> bool
   (or (= tag "area")
       (= tag "base")
@@ -114,6 +158,48 @@
       (inc! index)))
   (success))
 
+(defn- attribute-present? [attrs: Data, name: string] -> bool
+  (if (not (data.map? attrs))
+    (return false))
+  (let [index 0]
+    (while (< index (data.count attrs))
+      (let [key (data.key-at attrs index)]
+        (if (and (keyword-name-valid? key)
+                 (= (keyword-name key) name))
+          (return true)))
+      (inc! index)))
+  false)
+
+(defn- write-tag-shorthand-attributes!
+  [builder: ^strings.Builder, shorthand: string, attrs: Data]
+  (let [id-index (strings.index shorthand "#")
+        class-index (strings.index shorthand ".")]
+    (when (and (!= id-index -1)
+               (not (attribute-present? attrs "id")))
+      (let [id-end (if (= class-index -1) (count shorthand) class-index)]
+        (strings.write_string builder " id=\"")
+        (write-escaped! builder
+                        (odin-slice shorthand (+ id-index 1) id-end))
+        (strings.write_string builder "\"")))
+    (when (and (!= class-index -1)
+               (not (attribute-present? attrs "class")))
+      (strings.write_string builder " class=\"")
+      (let [cursor (+ class-index 1)
+            first? true]
+        (while (< cursor (count shorthand))
+          (let [relative-end (strings.index (odin-slice shorthand cursor) ".")
+                part-end (if (= relative-end -1)
+                           (count shorthand)
+                           (+ cursor relative-end))]
+            (if first?
+              (set! first? false)
+              (strings.write_string builder " "))
+            (write-escaped! builder (odin-slice shorthand cursor part-end))
+            (if (= relative-end -1)
+              (set! cursor (count shorthand))
+              (set! cursor (+ part-end 1)))))
+      (strings.write_string builder "\"")))))
+
 (defn- write-node!
   [builder: ^strings.Builder, node: Data]
   -> [error: Render-Error, ok: bool]
@@ -157,18 +243,27 @@
   (let [tag-value (data.item-at element 0)]
     (if (not (keyword-name-valid? tag-value))
       (return (failure "HTML tags must be non-empty keywords")))
-    (let [tag (keyword-name tag-value)]
-      (if (= tag "<>")
+    (let [shorthand (keyword-name tag-value)]
+      (if (= shorthand "<>")
         (return (write-children! builder element 1)))
-      (let [child-start 1]
+      (let [[shorthand-error shorthand-ok]
+            (validate-tag-shorthand shorthand)]
+        (if (not shorthand-ok)
+          (return shorthand-error false)))
+      (let [tag (odin-slice shorthand 0 (tag-name-end shorthand))
+            child-start 1
+            attrs tag-value]
         (strings.write_string builder "<")
         (strings.write_string builder tag)
         (when (and (> (data.count element) 1)
                    (data.map? (data.item-at element 1)))
+          (set! attrs (data.item-at element 1))
+          (set! child-start 2))
+        (write-tag-shorthand-attributes! builder shorthand attrs)
+        (when (= child-start 2)
           (let [[error ok] (write-attributes! builder (data.item-at element 1))]
             (if (not ok)
-              (return error false)))
-          (set! child-start 2))
+              (return error false))))
         (strings.write_string builder ">")
         (if (void-tag? tag)
           (if (< child-start (data.count element))
@@ -185,8 +280,8 @@
 (defn try-render-data
   "Validate and render Hiccup-shaped Data.
 
-  Element vectors use `[:tag {:attr value} child...]`. Tags and attribute
-  names must be keywords. Strings are always escaped."
+  Element vectors use `[:tag#id.class {:attr value} child...]`. Tags and
+  attribute names must be keywords. Strings are always escaped."
   [value: Data] -> [html: string, error: Render-Error, ok: bool]
   (let [builder (strings.builder_make)]
     (defer (strings.builder_destroy (addr builder)))

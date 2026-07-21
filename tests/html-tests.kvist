@@ -13,6 +13,38 @@
     (t.is (= rendered
              "<div class=\"panel\"><span>A&amp;B</span></div>"))))
 
+(t.deftest renders-tag-id-and-class-shorthand
+  (let [rendered (html.render
+                   [:div#daily-report-configuration.my-class "Report"]) :defer]
+    (t.is (= rendered
+             "<div id=\"daily-report-configuration\" class=\"my-class\">Report</div>"))))
+
+(t.deftest renders-multiple-shorthand-classes
+  (let [rendered (html.render
+                   [:section.report.daily "Ready"]) :defer]
+    (t.is (= rendered
+             "<section class=\"report daily\">Ready</section>"))))
+
+(t.deftest explicit-id-and-class-attributes-override-shorthand
+  (let [tree '[:div#shorthand-id.shorthand-class
+               {:id "explicit-id" :class "explicit-class"}]
+        rendered (html.render tree) :defer]
+    (t.is (= rendered
+             "<div id=\"explicit-id\" class=\"explicit-class\"></div>"))))
+
+(t.deftest supports-shorthand-on-void-elements
+  (let [rendered (html.render
+                   [:input#search-field.form-control]) :defer]
+    (t.is (= rendered
+             "<input id=\"search-field\" class=\"form-control\">"))))
+
+(t.deftest rejects-invalid-tag-shorthand
+  (let [[rendered error ok] (html.try-render-data '[:div.bad#id])
+        _ rendered]
+    (t.is (not ok))
+    (t.is (= error.message
+             "HTML tag shorthand must use :tag#id.class syntax with non-empty parts"))))
+
 (t.deftest renders-punctuated-keyword-attribute-names
   (let [rendered (html.render
                    [:form {:data-on:submit__prevent "@post('/capture')"
