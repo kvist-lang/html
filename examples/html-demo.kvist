@@ -1,6 +1,3 @@
-;; Copyright (c) Andreas Flakstad and Kvist contributors
-;; SPDX-License-Identifier: MIT
-
 ;; Contextual Data literals make inline Hiccup ordinary typed Kvist.
 (package main)
 (import h "..")

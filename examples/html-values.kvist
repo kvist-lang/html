@@ -1,6 +1,3 @@
-;; Copyright (c) Andreas Flakstad and Kvist contributors
-;; SPDX-License-Identifier: MIT
-
 ;; HTML supports a small typed value surface for attrs and text nodes.
 (package main)
 (import html "..")

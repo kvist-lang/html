@@ -1,6 +1,3 @@
-;; Copyright (c) Andreas Flakstad and Kvist contributors
-;; SPDX-License-Identifier: MIT
-
 ;; HTML can interpolate ordinary Kvist expressions directly in attrs and children.
 (package main)
 (import html "..")

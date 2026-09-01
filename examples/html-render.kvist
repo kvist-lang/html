@@ -1,6 +1,3 @@
-;; Copyright (c) Andreas Flakstad and Kvist contributors
-;; SPDX-License-Identifier: MIT
-
 ;; Render a shipped html tree to an owned HTML string.
 (package main)
 (import html "..")
