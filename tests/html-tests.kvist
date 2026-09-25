@@ -124,6 +124,13 @@
     (t.is (= error.message
              "HTML tagged children must be created with html.raw"))))
 
+(t.deftest rejects-non-string-trusted-raw-payloads
+  (let [tagged (data.tagged "kvist-html/raw" (data.from-int 42))
+        [rendered error ok] (html.try-render-data tagged)
+        _ rendered]
+    (t.is (not ok))
+    (t.is (= error.message "html.raw payload must be string Data"))))
+
 (t.deftest renders-data-template-bindings
   (let [name "Ada"
         rendered (html.template
