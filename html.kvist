@@ -8,7 +8,7 @@
 ])
 
 (defn- success [] -> [error: Render-Error, ok: bool]
-  (return (Render-Error []) true))
+  (return (Render-Error "") true))
 
 (defn- failure [message: string] -> [error: Render-Error, ok: bool]
   (return (Render-Error :message message) false))
@@ -252,10 +252,10 @@
             attrs tag-value]
         (strings.write_string builder "<")
         (strings.write_string builder tag)
-        (when (and (> (data.count element) 1)
-                   (data.map? (data.item-at element 1)))
-          (set! attrs (data.item-at element 1))
-          (set! child-start 2))
+        (when (> (data.count element) 1)
+          (when (data.map? (data.item-at element 1))
+            (set! attrs (data.item-at element 1))
+            (set! child-start 2)))
         (write-tag-shorthand-attributes! builder shorthand attrs)
         (when (= child-start 2)
           (let [[error ok] (write-attributes! builder (data.item-at element 1))]
@@ -285,7 +285,7 @@
     (let [[error ok] (write-node! (addr builder) value)]
       (if (not ok)
         (return "" error false)))
-    (return (finish-builder (addr builder)) (Render-Error []) true)))
+    (return (finish-builder (addr builder)) (Render-Error "") true)))
 
 (defn render-data
   "Render Hiccup-shaped Data to an owned HTML string, asserting when invalid."
@@ -312,7 +312,7 @@
     (let [[error ok] (write-node! (addr builder) value)]
       (if (not ok)
         (return "" error false)))
-    (return (finish-builder (addr builder)) (Render-Error []) true)))
+    (return (finish-builder (addr builder)) (Render-Error "") true)))
 
 (defn render-document
   "Render a complete Hiccup Data document to an owned string."
