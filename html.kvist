@@ -7,6 +7,16 @@
   message: string
 ])
 
+(def Raw-Tag "kvist-html/raw")
+
+(defn raw
+  "Wrap trusted, already serialized HTML without escaping.
+
+  Never pass untrusted or user-controlled text to this function. Prefer normal
+  string children for all text and attributes so the renderer escapes them."
+  [value: string] -> Data
+  (data.tagged Raw-Tag (data.from-string value)))
+
 (defn- success [] -> [error: Render-Error, ok: bool]
   (return (Render-Error "") true))
 
@@ -218,8 +228,17 @@
       (do
         (write-escaped! builder (data.string node))
         (success))
+    .Tagged
+      (if (!= (data.tag node) Raw-Tag)
+        (failure "HTML tagged children must be created with html.raw")
+        (let [value (data.tagged-value node)]
+          (if (not (data.string? value))
+            (failure "html.raw payload must be string Data")
+            (do
+              (strings.write_string builder (data.string value))
+              (success)))))
     .Vector (write-element! builder node)
-    (failure "HTML children must be nil, bool, number, string, or element-vector Data")))
+    (failure "HTML children must be nil, bool, number, string, html.raw, or element-vector Data")))
 
 (defn- write-children!
   [builder: ^strings.Builder, element: Data, start: int]

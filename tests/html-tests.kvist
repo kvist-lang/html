@@ -1,5 +1,7 @@
 (package tests)
 (import t "kvist:test")
+(import data "kvist:data")
+(import strings "core:strings")
 (import html "..")
 
 (t.deftest renders-contextual-data-and-escapes-html
@@ -90,6 +92,37 @@
 (t.deftest renders-string-input-as-escaped-text
   (let [rendered (html.render "A&B <ok>") :defer]
     (t.is (= rendered "A&amp;B &lt;ok&gt;"))))
+
+(t.deftest renders-explicit-trusted-raw-html
+  (let [rendered
+        (html.render
+          [:main
+           (html.raw "<section data-ready=\"true\">Ready & trusted</section>")])
+        :defer]
+    (t.is (=
+            rendered
+            "<main><section data-ready=\"true\">Ready & trusted</section></main>"))))
+
+(t.deftest renders-trusted-raw-json-ld-in-documents
+  (let [rendered
+        (html.render-document
+          [:html
+           [:head
+            [:script {:type "application/ld+json"}
+             (html.raw "{\"@type\":\"WebSite\"}")]]
+           [:body "Ready"]])
+        :defer]
+    (t.is (strings.contains
+            rendered
+            "<script type=\"application/ld+json\">{\"@type\":\"WebSite\"}</script>"))))
+
+(t.deftest rejects-arbitrary-tagged-html-children
+  (let [tagged (data.tagged "demo/raw" (data.from-string "<p>Unsafe</p>"))
+        [rendered error ok] (html.try-render-data tagged)
+        _ rendered]
+    (t.is (not ok))
+    (t.is (= error.message
+             "HTML tagged children must be created with html.raw"))))
 
 (t.deftest renders-data-template-bindings
   (let [name "Ada"

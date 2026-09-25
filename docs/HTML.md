@@ -80,6 +80,29 @@ Passing a string to `html.render` renders it as escaped text:
 ;; => "A&amp;B &lt;ok&gt;"
 ```
 
+## Trusted raw HTML
+
+`html.raw` marks an already serialized string for insertion without escaping.
+Use it only for content the application itself produced, such as a rendered
+subtree or machine-generated JSON-LD. Never pass request values, database text,
+or other untrusted content to it.
+
+```clojure
+(html.render
+  [:main
+   (html.raw trusted-rendered-fragment)])
+
+(html.render-document
+  [:html
+   [:head
+    [:script {:type "application/ld+json"}
+     (html.raw trusted-json-ld)]]
+   [:body "Ready"]])
+```
+
+Normal string children and attributes remain escaped. The raw marker is valid
+only as a child node; it does not weaken attribute escaping.
+
 ## Documents
 
 `html.render-document` renders Data through the same rules and prepends the

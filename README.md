@@ -15,3 +15,6 @@ See [the HTML guide](docs/HTML.md). Run the tests with:
 ```sh
 kvist test tests/html-tests.kvist
 ```
+
+Strings are escaped by default. The guide also documents `html.raw`, an
+explicit trusted-content escape hatch for already serialized HTML and JSON-LD.
